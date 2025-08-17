@@ -3,7 +3,6 @@ import time
 import tkinter as tk
 import tracemalloc
 from collections import deque
-from typing import Callable, List, Set, Tuple
 
 from performance import performanceStats
 from puzzle import eightTilePuzzle
@@ -22,17 +21,20 @@ def BFS(puzzle: eightTilePuzzle) -> performanceStats:
     Returns:
         performanceStats: Object containing execution time, memory usage, number of moves, and the solution path.
     """
+    if puzzle.isSolvable() is False:
+        return performanceStats(0.0, 0.0, -1, "Unsolvable configuration") 
+        
     start_time: float = time.time()
     tracemalloc.start()
 
-    visited_states: Set[Tuple[int, ...]] = set()
-    queue: deque[Tuple[List[int], int, List[str]]] = deque()
+    visited_states = set()
+    queue = deque()
 
     start_board = puzzle.getBoard()
-    queue.append((start_board, start_board.index(0), []))
+    queue.append((start_board, start_board.index(0), [])) # --> (current_state, blank_index, current_path)
     visited_states.add(tuple(start_board))
 
-    moves: List[Tuple[str, Callable[[List[int], int], Tuple[List[int], int] | None]]] = [
+    moves = [
         ("up", puzzle.moveUp),
         ("down", puzzle.moveDown),
         ("left", puzzle.moveLeft),
