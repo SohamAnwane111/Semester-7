@@ -24,4 +24,8 @@ class performanceStats:
     print("Number of moves needed : ", self.num_moves)
     print("Execution Time         : ", self.execution_time, "secs")
     print("Execution Memory       : ", self.execution_memory, "bytes")
-    print("Path                   : ", " -> ".join(self.path) if self.path else "No path found")
+    
+    if self.path == "Unsolvable configuration":
+      print("Unsolvable configuration")
+    else:
+      print("Path                   : ", " -> ".join(self.path) if self.path else "No path found")

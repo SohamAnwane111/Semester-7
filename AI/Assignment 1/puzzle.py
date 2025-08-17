@@ -1,5 +1,8 @@
 from typing import List, Tuple
+import json
 
+with open("config.json", "r") as f:
+    config = json.load(f)
 
 class eightTilePuzzle:
     """
@@ -14,14 +17,14 @@ class eightTilePuzzle:
             final_board (List[int], optional): The goal board configuration.
         """
         if initial_board is None:
-            initial_board = [1, 2, 3, 4, 5, 6, 7, 8, 0]
+            initial_board = config["default_board"]
         if final_board is None:
-            final_board = [1, 2, 3, 4, 5, 6, 7, 8, 0]
+            final_board = config["default_board"]
         self.initial_board: List[int] = initial_board
         self.final_board: List[int] = final_board
         self.blank_index: int = self.initial_board.index(0)
 
-    def __isSolvable(self) -> bool:
+    def isSolvable(self) -> bool:
         """
         Checks if the current puzzle configuration is solvable.
 
