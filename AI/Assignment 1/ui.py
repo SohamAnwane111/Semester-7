@@ -1,31 +1,22 @@
-# WARNING: This file is entirely copied from GPT (No one likes to create UIs hehe)
-
-import time
 import tkinter as tk
 from typing import List
-
 from performance import performanceStats
 from puzzle import eightTilePuzzle
 
 
 class PuzzleUI:
     """
-    A class to handle the Tkinter-based UI for visualizing the 8-tile puzzle solution.
-    Displays the puzzle board and animates the solution path.
+    Tkinter-based UI for visualizing the 8-tile puzzle solution with smooth animations.
     """
     def __init__(self, root: tk.Tk, puzzle: eightTilePuzzle, stats: performanceStats) -> None:
-        """
-        Initializes the PuzzleUI with the main window, puzzle instance, and performance stats.
-
-        Args:
-            root (tk.Tk): The main Tkinter window.
-            puzzle (eightTilePuzzle): The puzzle instance.
-            stats (performanceStats): The performance statistics of the solution.
-        """
         self.root: tk.Tk = root
         self.puzzle: eightTilePuzzle = puzzle
         self.stats: performanceStats = stats
         self.labels: List[List[tk.Label]] = []
+
+        tile_bg = "#4CAF50"  
+        empty_bg = "#2C2C2C" 
+        text_color = "white"
 
         for i in range(3):
             row: List[tk.Label] = []
@@ -33,66 +24,85 @@ class PuzzleUI:
                 lbl: tk.Label = tk.Label(
                     root,
                     text="",
-                    font=("Helvetica", 32),
+                    font=("Helvetica", 36, "bold"),
                     width=4,
                     height=2,
-                    borderwidth=2,
-                    relief="solid"
+                    bg=tile_bg,
+                    fg=text_color,
+                    borderwidth=3,
+                    relief="raised"
                 )
-                lbl.grid(row=i, column=j, padx=5, pady=5)
+                lbl.grid(row=i, column=j, padx=6, pady=6, sticky="nsew")
                 row.append(lbl)
             self.labels.append(row)
 
-        self.stats_label: tk.Label = tk.Label(root, text="", font=("Helvetica", 14))
-        self.stats_label.grid(row=4, column=0, columnspan=3)
+        for i in range(3):
+            root.grid_rowconfigure(i, weight=1)
+            root.grid_columnconfigure(i, weight=1)
+
+        self.stats_label: tk.Label = tk.Label(
+            root,
+            text="",
+            font=("Helvetica", 14, "bold"),
+            fg="white",
+            bg="#1E1E1E",
+            pady=10
+        )
+        self.stats_label.grid(row=4, column=0, columnspan=3, sticky="ew")
+
+        self.tile_bg = tile_bg
+        self.empty_bg = empty_bg
 
     def draw_board(self, board: List[int]) -> None:
         """
         Draws the current state of the puzzle board on the UI.
-
-        Args:
-            board (List[int]): The current board configuration.
         """
         for i in range(3):
             for j in range(3):
                 val: int = board[i * 3 + j]
-                self.labels[i][j].config(text=str(val) if val != 0 else "")
+                if val == 0:
+                    self.labels[i][j].config(text="", bg=self.empty_bg, relief="sunken")
+                else:
+                    self.labels[i][j].config(text=str(val), bg=self.tile_bg, relief="raised")
 
     def animate_path(self, initial_board: List[int], path: List[str]) -> None:
         """
-        Animates the solution path on the puzzle board.
-
-        Args:
-            initial_board (List[int]): The starting board configuration.
-            path (List[str]): The list of moves to solve the puzzle.
+        Smooth animation of puzzle solution path.
         """
-        board: List[int] = initial_board[:]
-        blank_index: int = board.index(0)
+        self.board: List[int] = initial_board[:]
+        self.blank_index: int = self.board.index(0)
+        self.path: List[str] = path
+        self.step_index: int = 0
 
-        self.draw_board(board)
-        self.root.update()
-        time.sleep(1)  
+        self.draw_board(self.board)
+        self.root.after(700, self._animate_step)  
 
-        for move in path:
-            if move == "up":
-                new_blank: int = blank_index - 3
-            elif move == "down":
-                new_blank = blank_index + 3
-            elif move == "left":
-                new_blank = blank_index - 1
-            elif move == "right":
-                new_blank = blank_index + 1
-            else:
-                continue  
+    def _animate_step(self):
+        if self.step_index >= len(self.path):
+            self.stats_label.config(
+                text=f"Moves: {self.stats.num_moves} | "
+                     f"Time: {self.stats.execution_time:.4f}s | "
+                     f"Memory: {self.stats.execution_memory:.4f} Bytes"
+            )
+            return
 
-            board[blank_index], board[new_blank] = board[new_blank], board[blank_index]
-            blank_index = new_blank
+        move = self.path[self.step_index]
 
-            self.draw_board(board)
-            self.root.update()
-            time.sleep(0.5)
+        if move == "up":
+            new_blank = self.blank_index - 3
+        elif move == "down":
+            new_blank = self.blank_index + 3
+        elif move == "left":
+            new_blank = self.blank_index - 1
+        elif move == "right":
+            new_blank = self.blank_index + 1
+        else:
+            self.step_index += 1
+            self.root.after(250, self._animate_step)
+            return
 
-       
-        self.stats_label.config(
-            text=f"Moves: {self.stats.num_moves} | Time: {self.stats.execution_time:.4f}s | Memory: {self.stats.execution_memory:.4f} Bytes"
-        )
+        self.board[self.blank_index], self.board[new_blank] = self.board[new_blank], self.board[self.blank_index]
+        self.blank_index = new_blank
+        self.draw_board(self.board)
+        self.step_index += 1
+        self.root.after(250, self._animate_step)
