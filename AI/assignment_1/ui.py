@@ -1,5 +1,6 @@
 import tkinter as tk
 from typing import List
+
 from assignment_1.performance import performanceStats
 from assignment_1.puzzle import eightTilePuzzle
 

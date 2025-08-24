@@ -1,6 +1,6 @@
-from typing import List, Tuple
 import json
 import os
+from typing import List, Tuple
 
 config_path = os.path.join(os.path.dirname(__file__), "config.json")
 

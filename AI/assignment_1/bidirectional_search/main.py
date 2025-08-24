@@ -1,9 +1,9 @@
 import json
+import os
 import time
 import tkinter as tk
 import tracemalloc
 from collections import deque
-import os
 
 from assignment_1.performance import performanceStats
 from assignment_1.puzzle import eightTilePuzzle

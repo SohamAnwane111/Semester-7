@@ -1,9 +1,10 @@
 import json
+import os
 import time
 import tkinter as tk
 import tracemalloc
-import os
-from typing import Callable, Any
+from typing import Any, Callable
+
 from assignment_1.performance import performanceStats
 from assignment_1.puzzle import eightTilePuzzle
 from assignment_1.ui import PuzzleUI
