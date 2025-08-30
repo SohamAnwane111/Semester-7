@@ -99,6 +99,8 @@ def a_star(puzzle: eightTilePuzzle) -> performanceStats:
 
     initial_level: int = 0
     initial_cost: int = compute_cost(initial_level, start_board)
+    
+    nodes_expanded: int = 0
 
     heapq.heappush(
         min_heap, (initial_cost, initial_level, start_board, start_board.index(0), [])
@@ -134,7 +136,10 @@ def a_star(puzzle: eightTilePuzzle) -> performanceStats:
                 execution_memory=execution_memory,
                 num_moves=len(path),
                 path=path,
+                nodes_expanded=nodes_expanded
             )
+
+        nodes_expanded += 1
 
         for move_name, move_func in moves:
             result: tuple[list[int], int] | None = move_func(current_state, blank_index)

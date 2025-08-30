@@ -15,7 +15,7 @@ class PuzzleUI:
         self.stats: performanceStats = stats
         self.labels: List[List[tk.Label]] = []
 
-        tile_bg = "#4CAF50"  
+        tile_bg = "#7700C7"  
         empty_bg = "#2C2C2C" 
         text_color = "white"
 

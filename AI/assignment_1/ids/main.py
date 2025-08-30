@@ -15,73 +15,67 @@ config_path = os.path.abspath(config_path)
 with open(config_path, "r") as f:
     config: dict[str, Any] = json.load(f)
 
+GOAL_STATE = tuple(config["puzzle"]["goal_board"])
+MAX_OPTIMAL_MOVES = 40
 
-def ids_iterator(
+def ids_dls(
     puzzle,
-    curr_board: list[int],
+    curr_board: tuple[int, ...],
     blank_index: int,
-    curr_level: int,
-    curr_path: list[str],
-    max_level: int,
+    depth: int,
+    max_depth: int,
+    path: list[str],
     moves,
-    visited_states: set
+    visited: set[tuple[int, ...]],
+    nodes_expanded: list[int]
 ) -> list[str] | None:
     """
-    Recursive helper function for Iterative Deepening Search (IDS).
-    Explores the puzzle state space up to a given depth limit.
-
-    Args:
-        puzzle: The eightTilePuzzle instance.
-        curr_board (list[int]): Current board configuration.
-        blank_index (int): Index of the blank tile (0).
-        curr_level (int): Current depth in the search tree.
-        curr_path (list[str]): List of moves taken so far.
-        max_level (int): Maximum depth to search (depth limit).
-        moves: List of possible moves (name, function).
-        visited_states (set): Set of visited board states.
-
-    Returns:
-        list[str] | None: The solution path if found, else None.
+    Depth-Limited Search (DLS) with cycle pruning.
     """
-    if curr_level == max_level:
-        if curr_board == config["puzzle"]["goal_board"]:
-            return curr_path
+    if curr_board == GOAL_STATE:
+        return path.copy()
+
+    if depth >= max_depth:
         return None
 
-    visited_states.add(tuple(curr_board))
+    nodes_expanded[0] += 1
 
     for move_name, move_func in moves:
-        result: tuple[list[int], int] | None = move_func(curr_board, blank_index)
+        result = move_func(list(curr_board), blank_index)
         if result:
-            new_state, new_blank_index = result
-            state_tuple: tuple[int, ...] = tuple(new_state)
-            if state_tuple not in visited_states:
-                solution = ids_iterator(
-                    puzzle,
-                    new_state,
-                    new_blank_index,
-                    curr_level + 1,
-                    curr_path + [move_name],
-                    max_level,
-                    moves,
-                    visited_states.copy() 
-                )
-                if solution is not None:
-                    return solution
+            new_state, new_blank = result
+            new_state_tuple = tuple(new_state)
+
+            if new_state_tuple in visited:
+                continue
+
+            visited.add(new_state_tuple)
+            path.append(move_name)
+
+            solution = ids_dls(
+                puzzle,
+                new_state_tuple,
+                new_blank,
+                depth + 1,
+                max_depth,
+                path,
+                moves,
+                visited,
+                nodes_expanded
+            )
+            if solution is not None:
+                return solution
+
+            path.pop() 
+
     return None
 
 
 def ids(puzzle: eightTilePuzzle) -> performanceStats:
     """
-    Solves the 8-tile puzzle using Iterative Deepening Search (IDS).
-
-    Args:
-        puzzle (eightTilePuzzle): The puzzle instance to solve.
-
-    Returns:
-        performanceStats: Object containing execution time, memory usage, number of moves, and the solution path.
+    Solves the 8-puzzle using optimized Iterative Deepening Search (IDS).
     """
-    if puzzle.isSolvable() is False:
+    if not puzzle.isSolvable():
         return performanceStats(0.0, 0.0, -1, "Unsolvable configuration")
 
     start_time: float = time.time()
@@ -98,29 +92,30 @@ def ids(puzzle: eightTilePuzzle) -> performanceStats:
 
     start_board: list[int] = puzzle.getBoard()
     blank_index: int = start_board.index(0)
+    start_tuple: tuple[int, ...] = tuple(start_board)
+    nodes_expanded: list[int] = [0]
 
     solution_path: list[str] | None = None
-    depth_limit = 0
 
-    while solution_path is None:
+    for depth_limit in range(MAX_OPTIMAL_MOVES + 1):
         print(f"[IDS] Trying depth limit = {depth_limit} ...")
-        visited_states: set = set()
-        solution_path = ids_iterator(
+
+        visited: set[tuple[int, ...]] = {start_tuple}
+        solution_path = ids_dls(
             puzzle,
-            start_board,
+            start_tuple,
             blank_index,
             0,
-            [],
             depth_limit,
+            [],
             moves,
-            visited_states,
+            visited,
+            nodes_expanded
         )
 
         if solution_path is not None:
             print(f"[IDS] Solution found at depth {depth_limit}!")
             break
-
-        depth_limit += 1
 
     end_time: float = time.time()
     execution_memory, _ = tracemalloc.get_traced_memory()
@@ -129,17 +124,13 @@ def ids(puzzle: eightTilePuzzle) -> performanceStats:
     return performanceStats(
         execution_time=end_time - start_time,
         execution_memory=execution_memory,
-        num_moves=len(solution_path),
-        path=solution_path,
+        num_moves=len(solution_path) if solution_path else -1,
+        path=solution_path or ["No solution found"],
+        nodes_expanded=nodes_expanded[0]
     )
 
 
 if __name__ == "__main__":
-    """
-    Main entry point for the 8-tile puzzle IDS visualizer.
-    Loads configuration, solves the puzzle using IDS, displays performance stats,
-    and launches the Tkinter UI for visualization.
-    """
     initial: list[int] = config["puzzle"]["initial_board"]
     final: list[int] = config["puzzle"]["goal_board"]
 

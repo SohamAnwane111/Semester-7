@@ -79,6 +79,8 @@ def BidirectionalBFS(puzzle: eightTilePuzzle) -> performanceStats:
 
     start_state = tuple(start_board)
     goal_state = tuple(goal_board)
+    
+    nodes_expanded: int = 0
 
     if start_state == goal_state:
         end_time: float = time.time()
@@ -107,6 +109,8 @@ def BidirectionalBFS(puzzle: eightTilePuzzle) -> performanceStats:
         # Expand forward
         state, blank_idx = forward_fringe_list.popleft()
         board = list(state)
+        
+        nodes_expanded += 1
 
         for move_name, move_func in moves:
             result = move_func(board, blank_idx)
@@ -128,11 +132,13 @@ def BidirectionalBFS(puzzle: eightTilePuzzle) -> performanceStats:
                         execution_time: float = end_time - start_time
                         execution_memory, _ = tracemalloc.get_traced_memory()
                         tracemalloc.stop()
-                        return performanceStats(execution_time, execution_memory, len(path), path)
+                        return performanceStats(execution_time, execution_memory, len(path), path, nodes_expanded)
 
         # Expand backward
         state, blank_idx = backward_fringe_list.popleft()
         board = list(state)
+
+        nodes_expanded += 1
 
         for move_name, move_func in moves:
             result = move_func(board, blank_idx)
@@ -153,7 +159,7 @@ def BidirectionalBFS(puzzle: eightTilePuzzle) -> performanceStats:
                         execution_time: float = end_time - start_time
                         execution_memory, _ = tracemalloc.get_traced_memory()
                         tracemalloc.stop()
-                        return performanceStats(execution_time, execution_memory, len(path), path)
+                        return performanceStats(execution_time, execution_memory, len(path), path, nodes_expanded)
 
     tracemalloc.stop()
     return performanceStats(0.0, 0.0, -1, "No solution found (unexpected).")

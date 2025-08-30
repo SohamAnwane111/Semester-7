@@ -33,6 +33,7 @@ def BFS(puzzle: eightTilePuzzle) -> performanceStats:
 
     visited_states = set()
     queue = deque()
+    nodes_expanded: int = 0
 
     start_board = puzzle.getBoard()
     queue.append((start_board, start_board.index(0), [])) # --> (current_state, blank_index, current_path)
@@ -58,8 +59,11 @@ def BFS(puzzle: eightTilePuzzle) -> performanceStats:
                 execution_time=execution_time,
                 execution_memory=execution_memory,
                 num_moves=len(path),
-                path=path
+                path=path,
+                nodes_expanded=nodes_expanded
             )
+
+        nodes_expanded += 1
 
         for move_name, move_func in moves:
             result = move_func(current_state, blank_index)
