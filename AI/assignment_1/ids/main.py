@@ -16,9 +16,12 @@ with open(config_path, "r") as f:
     config: dict[str, Any] = json.load(f)
 
 GOAL_STATE = tuple(config["puzzle"]["goal_board"])
-MAX_OPTIMAL_MOVES = 40
+MAX_OPTIMAL_MOVES = 100
 
-def ids_dls(
+# Time complexity  : O( summation[l = 0 -> d - 1] (d - l) b^l )
+# Space complexity : O(b * d)
+
+def ids_iterator(
     puzzle,
     curr_board: tuple[int, ...],
     blank_index: int,
@@ -52,7 +55,7 @@ def ids_dls(
             visited.add(new_state_tuple)
             path.append(move_name)
 
-            solution = ids_dls(
+            solution = ids_iterator(
                 puzzle,
                 new_state_tuple,
                 new_blank,
@@ -67,6 +70,7 @@ def ids_dls(
                 return solution
 
             path.pop() 
+            # visited.remove(new_state_tuple)
 
     return None
 
@@ -101,7 +105,7 @@ def ids(puzzle: eightTilePuzzle) -> performanceStats:
         print(f"[IDS] Trying depth limit = {depth_limit} ...")
 
         visited: set[tuple[int, ...]] = {start_tuple}
-        solution_path = ids_dls(
+        solution_path = ids_iterator(
             puzzle,
             start_tuple,
             blank_index,
