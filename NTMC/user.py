@@ -3,11 +3,10 @@ import secrets
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
+from loguru import logger
 from tinyec.ec import Curve, Point
 
 from utils import get_curve_and_order
-
-from loguru import logger
 
 
 @dataclass

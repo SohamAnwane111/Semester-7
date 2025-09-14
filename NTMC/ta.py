@@ -3,11 +3,11 @@ import secrets
 from dataclasses import dataclass
 from typing import Tuple
 
+from loguru import logger
 from tinyec.ec import Curve, Point
 
 from utils import get_curve_and_order, hash_to_int, point_to_bytes
 
-from loguru import logger
 
 @dataclass
 class TrustedAuthority:

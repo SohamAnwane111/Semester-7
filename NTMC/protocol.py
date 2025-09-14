@@ -2,11 +2,11 @@
 import secrets
 from typing import Tuple
 
+from loguru import logger
+
 from ta import TrustedAuthority
 from user import User
 from utils import H1_id_T_R, H2_many, H3_derive, point_to_bytes
-
-from loguru import logger
 
 
 def protocol_key_agreement(sm: "User", sp: "User", ta: "TrustedAuthority") -> Tuple[bytes, bytes]:

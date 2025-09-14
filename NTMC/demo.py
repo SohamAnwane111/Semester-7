@@ -1,10 +1,11 @@
 """Top-level demo script to simulate the full flow: KGC -> registration -> key agreement."""
 
+from loguru import logger
+
 from protocol import protocol_key_agreement
 from ta import TrustedAuthority
 from user import User
 
-from loguru import logger
 
 def run_demo():
     logger.info("CL2PAKA demo")
