@@ -10,6 +10,7 @@ It simulates the communication flow between:
 Both parties register with the TA and then establish a **shared session key** using the certificateless key agreement protocol.
 
 ---
+<img width="1039" height="1086" alt="image" src="https://github.com/user-attachments/assets/0af01729-cd18-44c0-93cb-deae4c8404a5" />
 
 ##  Getting Started
 
