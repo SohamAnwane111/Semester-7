@@ -1,0 +1,7 @@
+tinyec>=0.3.3
+pycryptodome>=3.9
+logging
+loguru
+
+# optional
+pytest
