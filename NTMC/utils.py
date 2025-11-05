@@ -7,6 +7,7 @@ import hashlib
 import hmac
 from typing import Tuple
 from tinyec import ec, registry
+import random
 
 Curve = ec.Curve
 Point = ec.Point
@@ -102,3 +103,13 @@ def xor_bytes(data: bytes, key_byte: int) -> bytes:
     """POC: XOR every byte of `data` with the low byte of key_byte."""
     kb = key_byte & 0xFF
     return bytes(b ^ kb for b in data)
+
+
+def random_secret_xor():
+    """Return a random integer between 2 and 100000 (for session XOR key)."""
+    return random.randint(2, 100000)
+
+
+# convenience wrapper used by ta.py
+def hash_to_int_simple(data: bytes, q: int) -> int:
+    return hash_to_int(data, q)

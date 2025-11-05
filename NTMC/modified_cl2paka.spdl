@@ -1,0 +1,193 @@
+/*  CL2PAKA (Certificateless Two-Party Authenticated Key Agreement) — Enhanced Scyther model
+    With KGC role, key confirmation (HMAC handshake), and encrypted partial private key distribution
+    Source: Deng & Gao, "Certificateless two-party authenticated key agreement scheme 
+            for smart grid," Information Sciences, 2021
+*/
+
+/* Hash functions used in the protocol */
+hashfunction H1;    // For computing hi, hj from (ID, T, R)
+hashfunction H2;    // For computing lij (challenge)
+hashfunction H3;    // For session key derivation (HKDF)
+hashfunction HMAC;  // For key confirmation MACs
+
+/* Symmetric key function for secure channel */
+hashfunction skey;  // Simulates XOR/encryption for partial private key distribution
+
+/* System parameter */
+const Ppub;         // Public parameter from KGC master secret
+
+protocol CL2PAKA(KGC, SMi, SPj)
+{
+    /*  
+        Role KGC (Key Generation Center / Trusted Authority)
+        Responsible for generating and distributing partial private keys
+    */
+    role KGC
+    {
+        /* Master secret key (never transmitted) */
+        fresh msk;
+        
+        /* Fresh values for each user's partial private key */
+        fresh di, ri;   // Partial private components for SMi
+        fresh dj, rj;   // Partial private components for SPj
+        
+        /* Variables for user identities and public values */
+        var IDi, Ti;
+        var IDj, Tj;
+        
+        /* Compute Ri, Rj from random values */
+        fresh Ri, Rj;
+        
+        /* Registration Phase for SMi */
+        recv_kgc1(SMi, KGC, IDi, Ti);
+        
+        /* Generate partial private key for SMi: di = ri + H1(IDi,Ti,Ri)*msk */
+        /* Send encrypted partial private key using secure channel key */
+        send_kgc2(KGC, SMi, {di, Ri}skey(IDi, Ti));
+        
+        /* Registration Phase for SPj */
+        recv_kgc3(SPj, KGC, IDj, Tj);
+        
+        /* Generate partial private key for SPj: dj = rj + H1(IDj,Tj,Rj)*msk */
+        send_kgc4(KGC, SPj, {dj, Rj}skey(IDj, Tj));
+        
+        /* Security claims for KGC */
+        claim(KGC, Secret, msk);
+        claim(KGC, Secret, di);
+        claim(KGC, Secret, dj);
+    }
+
+    /*  
+        Role SMi (Smart Meter, Initiator)
+    */
+    role SMi
+    {
+        /* Long-term secret and ephemeral values */
+        fresh IDi, ti;              // Identity and long-term secret
+        fresh Ti;                   // Long-term public key: Ti = ti*G
+        fresh ai;                   // Ephemeral secret
+        fresh Mi;                   // Ephemeral public key: Mi = ai*G
+        
+        /* Partial private key from KGC (received encrypted) */
+        var di, Ri;
+        
+        /* Variables for received values from SPj */
+        var IDj, Tj, Rj, Mj;
+        
+        /* Session key and MACs for key confirmation */
+        var sk;
+        fresh mac_i;                // MAC computed by SMi
+        var mac_j;                  // MAC received from SPj
+        
+        /* === REGISTRATION PHASE === */
+        /* Request partial private key from KGC */
+        send_kgc1(SMi, KGC, IDi, Ti);
+        
+        /* Receive encrypted partial private key */
+        recv_kgc2(KGC, SMi, {di, Ri}skey(IDi, Ti));
+        
+        /* === KEY AGREEMENT PHASE === */
+        /* Message 1: SMi -> SPj : (IDi, Ti, Ri, Mi) */
+        send_1(SMi, SPj, IDi, Ti, Ri, Mi);
+
+        /* Message 2: SPj -> SMi : (IDj, Tj, Rj, Mj) */
+        recv_2(SPj, SMi, IDj, Tj, Rj, Mj);
+
+        /* Compute shared secret and derive session key */
+        /* K = ((lij*ai + ti + di) * (lij*Mj + Tj + Rj + hj*Ppub)) */
+        /* where lij = H2(IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj) */
+        /*       hj = H1(IDj, Tj, Rj) */
+        match(sk, H3(IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj, 
+                     H1(ti, di, ai, Mj, Tj, Rj, H1(IDj, Tj, Rj), H2(IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj), Ppub)));
+
+        /* === KEY CONFIRMATION PHASE === */
+        /* Compute MAC using derived session key */
+        match(mac_i, HMAC(sk, IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj));
+        
+        /* Message 3: SMi -> SPj : mac_i (key confirmation from SMi) */
+        send_3(SMi, SPj, mac_i);
+        
+        /* Message 4: SPj -> SMi : mac_j (key confirmation from SPj) */
+        recv_4(SPj, SMi, mac_j);
+        
+        /* Verify received MAC matches expected value */
+        match(mac_j, HMAC(sk, IDj, IDi, Tj, Ti, Rj, Ri, Mj, Mi));
+
+        /* Security claims */
+        claim(SMi, Secret, sk);
+        claim(SMi, Secret, ti);
+        claim(SMi, Secret, di);
+        claim(SMi, Secret, ai);
+        claim(SMi, Alive);
+        claim(SMi, Weakagree);
+        claim(SMi, Nisynch);
+        claim(SMi, Niagree);
+    }
+
+    /*  
+        Role SPj (Service Provider, Responder)
+    */
+    role SPj
+    {
+        /* Variables for received values from SMi (must be declared first) */
+        var IDi, Ti, Ri, Mi;
+
+        /* Long-term secret and ephemeral values */
+        fresh IDj, tj;              // Identity and long-term secret
+        fresh Tj;                   // Long-term public key: Tj = tj*G
+        fresh bj;                   // Ephemeral secret
+        fresh Mj;                   // Ephemeral public key: Mj = bj*G
+        
+        /* Partial private key from KGC (received encrypted) */
+        var dj, Rj;
+        
+        /* Session key and MACs for key confirmation */
+        var sk;
+        var mac_i;                  // MAC received from SMi
+        fresh mac_j;                // MAC computed by SPj
+        
+        /* === REGISTRATION PHASE === */
+        /* Request partial private key from KGC */
+        send_kgc3(SPj, KGC, IDj, Tj);
+        
+        /* Receive encrypted partial private key */
+        recv_kgc4(KGC, SPj, {dj, Rj}skey(IDj, Tj));
+        
+        /* === KEY AGREEMENT PHASE === */
+        /* Message 1: SMi -> SPj : (IDi, Ti, Ri, Mi) */
+        recv_1(SMi, SPj, IDi, Ti, Ri, Mi);
+
+        /* Message 2: SPj -> SMi : (IDj, Tj, Rj, Mj) */
+        send_2(SPj, SMi, IDj, Tj, Rj, Mj);
+
+        /* Compute shared secret and derive session key */
+        /* K = ((lij*bj + tj + dj) * (lij*Mi + Ti + Ri + hi*Ppub)) */
+        /* where lij = H2(IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj) */
+        /*       hi = H1(IDi, Ti, Ri) */
+        match(sk, H3(IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj, 
+                     H1(tj, dj, bj, Mi, Ti, Ri, H1(IDi, Ti, Ri), H2(IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj), Ppub)));
+
+        /* === KEY CONFIRMATION PHASE === */
+        /* Message 3: SMi -> SPj : mac_i (key confirmation from SMi) */
+        recv_3(SMi, SPj, mac_i);
+        
+        /* Verify received MAC matches expected value */
+        match(mac_i, HMAC(sk, IDi, IDj, Ti, Tj, Ri, Rj, Mi, Mj));
+        
+        /* Compute MAC using derived session key */
+        match(mac_j, HMAC(sk, IDj, IDi, Tj, Ti, Rj, Ri, Mj, Mi));
+        
+        /* Message 4: SPj -> SMi : mac_j (key confirmation from SPj) */
+        send_4(SPj, SMi, mac_j);
+
+        /* Security claims */
+        claim(SPj, Secret, sk);
+        claim(SPj, Secret, tj);
+        claim(SPj, Secret, dj);
+        claim(SPj, Secret, bj);
+        claim(SPj, Alive);
+        claim(SPj, Weakagree);
+        claim(SPj, Nisynch);
+        claim(SPj, Niagree);
+    }
+}

@@ -1,4 +1,7 @@
 """User (Smart Meter / Service Provider) class."""
+
+# user.py
+
 import secrets
 from dataclasses import dataclass
 from typing import Optional, Tuple
