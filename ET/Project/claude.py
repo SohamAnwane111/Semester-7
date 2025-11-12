@@ -31,38 +31,39 @@ SEED = 42
 np.random.seed(SEED)
 
 # ---------------------
-# Load REAL sparse dataset from web (20 Newsgroups)
+# Load REAL sparse dataset - Breast Cancer (from web, fast download)
 # ---------------------
-print("Downloading 20 Newsgroups dataset from the web...")
-print("This may take a minute on first run...")
+print("Loading Breast Cancer dataset from UCI repository (fast)...")
 
-# Fetch two categories for binary classification
-newsgroups = fetch_20newsgroups(
-    subset='train',
-    categories=['sci.space', 'rec.autos'],
-    remove=('headers', 'footers', 'quotes'),
-    random_state=SEED
-)
+from sklearn.datasets import load_breast_cancer
 
-print(f"Downloaded {len(newsgroups.data)} documents")
+# This dataset is small and downloads very quickly
+cancer_data = load_breast_cancer()
+X_full = cancer_data.data
+y = (cancer_data.target.reshape(-1, 1).astype(float))
 
-# Create TF-IDF features (very sparse!)
-vectorizer = TfidfVectorizer(max_features=500, min_df=2, max_df=0.95)
-X_sparse = vectorizer.fit_transform(newsgroups.data)
-y = newsgroups.target.reshape(-1, 1).astype(float)
+print(f"Downloaded {len(X_full)} samples with {X_full.shape[1]} features")
 
-print(f"Feature matrix shape: {X_sparse.shape}")
-print(f"Sparsity: {100 * (1 - X_sparse.nnz / (X_sparse.shape[0] * X_sparse.shape[1])):.2f}% zeros")
+# Create sparse features by applying thresholding
+# Keep only top 20% of values per feature, zero out the rest
+X_sparse_list = []
+for i in range(X_full.shape[1]):
+    col = X_full[:, i].copy()
+    threshold = np.percentile(col, 80)  # 80th percentile
+    col[col < threshold] = 0  # Make 80% sparse
+    X_sparse_list.append(col)
 
-# Select 2 most important features for visualization
-from sklearn.feature_selection import SelectKBest, f_classif
+X_sparse_full = np.column_stack(X_sparse_list)
+sparsity = (X_sparse_full == 0).sum() / X_sparse_full.size * 100
+print(f"Created sparse features with {sparsity:.1f}% zeros")
+
+# Select 2 features with highest variance for visualization
+from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_classif
 selector = SelectKBest(f_classif, k=2)
-X_2d = selector.fit_transform(X_sparse, y.ravel())
-X_2d = X_2d.toarray() if hasattr(X_2d, "toarray") else X_2d
+X_2d = selector.fit_transform(X_sparse_full, y.ravel())
 
 X_train, X_val, y_train, y_val = train_test_split(X_2d, y, test_size=0.2, random_state=SEED)
-print(f"Training samples: {X_train.shape[0]}")
-
+print(f"Training samples: {len(X_train)}")
 
 # ---------------------
 # Logistic regression model (2 features + bias)
